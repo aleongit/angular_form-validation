@@ -54,6 +54,7 @@
 
 ### angular - guide
 - https://angular.io/guide/form-validation#custom-validators
+- https://angular.io/guide/form-validation#dirty-or-touched
 
 
 

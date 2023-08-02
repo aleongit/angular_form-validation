@@ -243,3 +243,96 @@ select {
 ```
 
 
+
+## Cross-field validation
+
+- A cross-field validator is a *custom validator* that compares the values of different fields in a form and accepts or rejects them in combination. For example, you might have a form that offers mutually incompatible options, so that if the user can choose A or B, but not both. Some field values might also depend on others; a user might be allowed to choose B only if A is also chosen.
+
+- The following cross validation examples show how to do the following:
+
+  - Validate reactive or template-based form input based on the values of two sibling controls,
+  - Show a descriptive error message after the user interacted with the form and the validation failed.
+
+- The examples use cross-validation to ensure that heroes do not reveal their true identities by filling out the Hero Form. The validators do this by checking that the hero names and alter egos do not match.
+
+
+
+### Adding cross-validation to reactive forms
+
+- Notice that the `name` and `alterEgo` are sibling controls. To evaluate both controls in a single custom validator, you must perform the validation in a common ancestor control: the `FormGroup`. You query the `FormGroup` for its child controls so that you can compare their values.
+
+- To add a validator to the `FormGroup`, pass the new validator in as the second argument on creation.
+
+```ts
+const heroForm = new FormGroup({
+  'name': new FormControl(),
+  'alterEgo': new FormControl(),
+  'power': new FormControl()
+}, { validators: identityRevealedValidator });
+```
+
+- The validator code is as follows.
+- **shared/identity-revealed.directive.ts**
+```ts
+/** A hero's name can't match the hero's alter ego */
+export const identityRevealedValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const name = control.get('name');
+  const alterEgo = control.get('alterEgo');
+
+  return name && alterEgo && name.value === alterEgo.value ? { identityRevealed: true } : null;
+};
+```
+
+- The identity validator implements the `ValidatorFn` interface. It takes an Angular control object as an argument and returns either null if the form is valid, or `ValidationErrors` otherwise.
+
+- The validator retrieves the child controls by calling the `FormGroup`'s get method, then compares the values of the `name` and `alterEgo` controls.
+
+- If the values do not match, the hero's identity remains secret, both are valid, and the validator returns null. If they do match, the hero's identity is revealed and the validator must mark the form as invalid by returning an error object.
+
+- To provide better user experience, the template shows an appropriate error message when the form is invalid.
+
+- **reactive/hero-form-template.component.html**
+```html
+<div *ngIf="heroForm.errors?.['identityRevealed'] && (heroForm.touched || heroForm.dirty)" class="cross-validation-error-message alert alert-danger">
+    Name cannot match alter ego.
+</div>
+```
+
+- his `*ngIf` displays the error if the `FormGroup` has the cross validation error returned by the `identityRevealed` validator, but only if the user finished interacting with the form.
+
+
+
+### Adding cross-validation to template-driven forms
+
+- For a template-driven form, you must create a directive to wrap the validator function. You provide that directive as the validator using the `NG_VALIDATORS` token, as shown in the following example.
+
+- **shared/identity-revealed.directive.ts**
+```ts
+@Directive({
+  selector: '[appIdentityRevealed]',
+  providers: [{ provide: NG_VALIDATORS, useExisting: IdentityRevealedValidatorDirective, multi: true }]
+})
+export class IdentityRevealedValidatorDirective implements Validator {
+  validate(control: AbstractControl): ValidationErrors | null {
+    return identityRevealedValidator(control);
+  }
+}
+```
+
+- You must add the new directive to the HTML template. Because the validator must be registered at the highest level in the form, the following template puts the directive on the `form` tag.
+
+- **template/hero-form-template.component.html**
+```html
+<form #heroForm="ngForm" appIdentityRevealed>
+```
+
+- To provide better user experience, an appropriate error message appears when the form is invalid.
+
+- **template/hero-form-template.component.html**
+```html
+<div *ngIf="heroForm.errors?.['identityRevealed'] && (heroForm.touched || heroForm.dirty)" class="cross-validation-error-message alert">
+    Name cannot match alter ego.
+</div>
+```
+
+- This is the same in both template-driven and reactive forms.
