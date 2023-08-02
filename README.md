@@ -63,6 +63,7 @@
 - https://angular.io/api/forms/FormControl
 - https://angular.io/api/forms/AbstractControl
 - https://angular.io/api/forms/MinLengthValidator
+- https://angular.io/api/forms/Validators
 
 
 
