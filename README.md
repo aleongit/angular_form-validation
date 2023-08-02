@@ -53,9 +53,19 @@
 
 
 ### angular - guide
-- TODO
+- https://angular.io/guide/form-validation#custom-validators
+
 
 
 ### angular - api
-- TODO
+- https://angular.io/api/common/NgIf
+- https://angular.io/api/forms/NgModel
+- https://angular.io/api/forms/FormControl
+- https://angular.io/api/forms/AbstractControl
+- https://angular.io/api/forms/MinLengthValidator
+
+
+
+### html
+- https://developer.mozilla.org/en-US/docs/Web/HTML/Constraint_validation
 
