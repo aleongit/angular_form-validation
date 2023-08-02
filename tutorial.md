@@ -192,3 +192,54 @@ export class ForbiddenValidatorDirective implements Validator {
 - Notice that the custom validation directive is instantiated with `useExisting` rather than `useClass`. The registered validator must be this instance of the `ForbiddenValidatorDirective` —the instance in the form with its `forbiddenName` property bound to "bob".
 
 - If you were to replace `useExisting` with `useClass`, then you'd be registering a new class instance, one that doesn't have a `forbiddenName`.
+
+
+
+## Control status CSS classes
+
+- Angular automatically mirrors many control properties onto the form control element as CSS classes. Use these classes to style form control elements according to the state of the form. The following classes are currently supported.
+
+  - `ng-valid`
+  - `ng-invalid`
+  - `ng-pending`
+  - `ng-pristine`
+  - `ng-dirty`
+  - `ng-untouched`
+  - `ng-touched`
+  - `ng-submitted` (enclosing form element only)
+
+- In the following example, the hero form uses the `.ng-valid` and `.ng-invalid` classes to set the color of each form control's border.
+
+- **forms.css**
+```css
+.ng-valid[required], .ng-valid.required  {
+  border-left: 5px solid #42A948; /* green */
+}
+
+.ng-invalid:not(form)  {
+  border-left: 5px solid #a94442; /* red */
+}
+
+.alert div {
+  background-color: #fed3d3;
+  color: #820000;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+label {
+  display: block;
+  margin-bottom: .5rem;
+}
+
+select {
+  width: 100%;
+  padding: .5rem;
+}
+```
+
+
