@@ -124,3 +124,71 @@ get power() { return this.heroForm.get('power'); }
 
 
 
+## Defining custom validators
+
+- The built-in validators don't always match the exact use case of your application, so you sometimes need to create a custom validator.
+
+- Consider the `forbiddenNameValidator` function from previous *reactive-form examples*. Here's what the definition of that function looks like.
+
+- **shared/forbidden-name.directive.ts**
+```ts
+/** A hero's name can't match the given regular expression */
+export function forbiddenNameValidator(nameRe: RegExp): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const forbidden = nameRe.test(control.value);
+    return forbidden ? {forbiddenName: {value: control.value}} : null;
+  };
+}
+```
+
+- The function is a factory that takes a regular expression to detect a specific forbidden name and returns a validator function.
+
+- In this sample, the forbidden name is "bob", so the validator rejects any hero name containing "bob". Elsewhere it could reject "alice" or any name that the configuring regular expression matches.
+
+- The `forbiddenNameValidator` factory returns the configured validator function. That function takes an Angular control object and returns *either* null if the control value is valid *or* a validation error object. The validation error object typically has a property whose name is the validation key, `'forbiddenName'`, and whose value is an arbitrary dictionary of values that you could insert into an error message, `{name}`.
+
+- Custom async validators are similar to sync validators, but they must instead return a Promise or observable that later emits null or a validation error object. In the case of an observable, the observable must complete, at which point the form uses the last value emitted for validation.
+
+
+
+### Adding custom validators to reactive forms
+
+- In template-driven forms, add a directive to the template, where the directive wraps the validator function. For example, the corresponding `ForbiddenValidatorDirective` serves as a wrapper around the `forbiddenNameValidator`.
+
+- Angular recognizes the directive's role in the validation process because the directive registers itself with the `NG_VALIDATORS` provider, as shown in the following example. `NG_VALIDATORS` is a predefined provider with an extensible collection of validators.
+
+- **shared/forbidden-name.directive.ts**
+```ts
+providers: [{provide: NG_VALIDATORS, useExisting: ForbiddenValidatorDirective, multi: true}]
+```
+
+- The directive class then implements the `Validator` interface, so that it can easily integrate with Angular forms. Here is the rest of the directive to help you get an idea of how it all comes together.
+
+- **shared/forbidden-name.directive.ts**
+```ts
+@Directive({
+  selector: '[appForbiddenName]',
+  providers: [{provide: NG_VALIDATORS, useExisting: ForbiddenValidatorDirective, multi: true}]
+})
+export class ForbiddenValidatorDirective implements Validator {
+  @Input('appForbiddenName') forbiddenName = '';
+
+  validate(control: AbstractControl): ValidationErrors | null {
+    return this.forbiddenName ? forbiddenNameValidator(new RegExp(this.forbiddenName, 'i'))(control)
+                              : null;
+  }
+}
+```
+
+- Once the `ForbiddenValidatorDirective` is ready, you can add its selector, `appForbiddenName`, to any input element to activate it.
+
+- **template/hero-form-template.component.html**
+```html
+<input type="text" id="name" name="name" class="form-control"
+      required minlength="4" appForbiddenName="bob"
+      [(ngModel)]="hero.name" #name="ngModel">
+```
+
+- Notice that the custom validation directive is instantiated with `useExisting` rather than `useClass`. The registered validator must be this instance of the `ForbiddenValidatorDirective` —the instance in the form with its `forbiddenName` property bound to "bob".
+
+- If you were to replace `useExisting` with `useClass`, then you'd be registering a new class instance, one that doesn't have a `forbiddenName`.

@@ -67,6 +67,11 @@
 
 
 
+### typescript
+- https://stackoverflow.com/questions/54961508/what-does-forbiddennamevalidatornew-regexpthis-forbiddenname-icontrol
+
+
+
 ### html
 - https://developer.mozilla.org/en-US/docs/Web/HTML/Constraint_validation
 
