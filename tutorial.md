@@ -479,3 +479,9 @@ export class UniqueAlterEgoValidatorDirective implements AsyncValidator {
 ```ts
 new FormControl('', {updateOn: 'blur'});
 ```
+
+
+
+## Interaction with native HTML form validation
+
+- By default, Angular disables *native HTML form validation* by adding the `novalidate` attribute on the enclosing `<form>` and uses directives to match these attributes with validator functions in the framework. If you want to use native validation **in combination** with Angular-based validation, you can re-enable it with the `ngNativeValidate` directive. See the API docs for details.
