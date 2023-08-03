@@ -336,3 +336,146 @@ export class IdentityRevealedValidatorDirective implements Validator {
 ```
 
 - This is the same in both template-driven and reactive forms.
+
+
+
+## Creating asynchronous validators
+
+- Asynchronous validators implement the `AsyncValidatorFn` and `AsyncValidator` interfaces. These are very similar to their synchronous counterparts, with the following differences.
+
+  - The `validate()` functions must return a *Promise* or an *observable*,
+
+  - The observable returned must be *finite*, meaning it must complete at some point. To convert an infinite observable into a finite one, pipe the observable through a filtering operator such as `first`, `last`, `take`, or `takeUntil`.
+
+- Asynchronous validation happens after the synchronous validation, and is performed only if the synchronous validation is successful. This check lets forms avoid potentially expensive async validation processes (such as an HTTP request) if the more basic validation methods have already found invalid input.
+
+- After asynchronous validation begins, the form control enters a `pending` state. Inspect the control's `pending` property and use it to give visual feedback about the ongoing validation operation.
+
+- A common UI pattern is to show a spinner while the async validation is being performed. The following example shows how to achieve this in a template-driven form.
+
+```html
+<input [(ngModel)]="name" #model="ngModel" appSomeAsyncValidator>
+<app-spinner *ngIf="model.pending"></app-spinner>
+```
+
+
+### Implementing a custom async validator
+
+- In the following example, an async validator ensures that heroes pick an alter ego that is not already taken. New heroes are constantly enlisting and old heroes are leaving the service, so the list of available alter egos cannot be retrieved ahead of time. To validate the potential alter ego entry, the validator must initiate an asynchronous operation to consult a central database of all currently enlisted heroes.
+
+- The following code creates the validator class, `UniqueAlterEgoValidator`, which implements the `AsyncValidator` interface.
+
+```ts
+@Injectable({ providedIn: 'root' })
+export class UniqueAlterEgoValidator implements AsyncValidator {
+  constructor(private heroesService: HeroesService) {}
+
+  validate(
+    control: AbstractControl
+  ): Observable<ValidationErrors | null> {
+    return this.heroesService.isAlterEgoTaken(control.value).pipe(
+      map(isTaken => (isTaken ? { uniqueAlterEgo: true } : null)),
+      catchError(() => of(null))
+    );
+  }
+}
+```
+
+- The constructor injects the `HeroesService`, which defines the following interface.
+
+```ts
+interface HeroesService {
+  isAlterEgoTaken: (alterEgo: string) => Observable<boolean>;
+}
+```
+
+- In a real world application, the `HeroesService` would be responsible for making an HTTP request to the hero database to check if the alter ego is available. From the validator's point of view, the actual implementation of the service is not important, so the example can just code against the `HeroesService` interface.
+
+- As the validation begins, the `UniqueAlterEgoValidator` delegates to the `HeroesService` `isAlterEgoTaken()` method with the current control value. At this point the control is marked as `pending` and remains in this state until the observable chain returned from the `validate()` method completes.
+
+- The `isAlterEgoTaken()` method dispatches an HTTP request that checks if the alter ego is available, and returns `Observable<boolean>` as the result. The `validate()` method pipes the response through the `map` operator and transforms it into a validation result.
+
+- The method then, like any validator, returns `null` if the form is valid, and `ValidationErrors` if it is not. This validator handles any potential errors with the `catchError` operator. In this case, the validator treats the `isAlterEgoTaken()` error as a successful validation, because failure to make a validation request does not necessarily mean that the alter ego is invalid. You could handle the error differently and return the `ValidationError` object instead.
+
+- After some time passes, the observable chain completes and the asynchronous validation is done. The `pending` flag is set to false, and the form validity is updated.
+
+
+
+### Adding async validators to reactive forms
+
+- To use an async validator in reactive forms, begin by injecting the validator into the constructor of the component class.
+
+```ts
+constructor(private alterEgoValidator: UniqueAlterEgoValidator) {}
+```
+
+- Then, pass the validator function directly to the FormControl to apply it.
+
+- In the following example, the `validate` function of `UniqueAlterEgoValidator` is applied to `alterEgoControl` by passing it to the control's `asyncValidators` option and binding it to the instance of `UniqueAlterEgoValidator` that was injected into `HeroFormReactiveComponent`. The value of `asyncValidators` can be either a single async validator function, or an array of functions. To learn more about `FormControl` options, see the `AbstractControlOptions` API reference.
+
+```ts
+const alterEgoControl = new FormControl('', {
+  asyncValidators: [this.alterEgoValidator.validate.bind(this.alterEgoValidator)],
+  updateOn: 'blur'
+});
+```
+
+
+### Adding async validators to template-driven forms
+
+- To use an async validator in template-driven forms, create a new directive and register the `NG_ASYNC_VALIDATORS` provider on it.
+
+- In the example below, the directive injects the `UniqueAlterEgoValidator` class that contains the actual validation logic and invokes it in the `validate` function, triggered by Angular when validation should happen.
+
+```ts
+@Directive({
+  selector: '[appUniqueAlterEgo]',
+  providers: [
+    {
+      provide: NG_ASYNC_VALIDATORS,
+      useExisting: forwardRef(() => UniqueAlterEgoValidatorDirective),
+      multi: true
+    }
+  ]
+})
+export class UniqueAlterEgoValidatorDirective implements AsyncValidator {
+  constructor(private validator: UniqueAlterEgoValidator) {}
+
+  validate(
+    control: AbstractControl
+  ): Observable<ValidationErrors | null> {
+    return this.validator.validate(control);
+  }
+}
+```
+
+- Then, as with synchronous validators, add the directive's selector to an input to activate it.
+
+```html
+<input type="text"
+         id="alterEgo"
+         name="alterEgo"
+         #alterEgo="ngModel"
+         [(ngModel)]="hero.alterEgo"
+         [ngModelOptions]="{ updateOn: 'blur' }"
+         appUniqueAlterEgo>
+```
+
+
+### Optimizing performance of async validators
+
+- By default, all validators run after every form value change. With synchronous validators, this does not normally have a noticeable impact on application performance. Async validators, however, commonly perform some kind of HTTP request to validate the control. Dispatching an HTTP request after every keystroke could put a strain on the backend API, and should be avoided if possible.
+
+- You can delay updating the form validity by changing the `updateOn` property from `change` (default) to `submit` or `blur`.
+
+- With template-driven forms, set the property in the template.
+
+```html
+<input [(ngModel)]="name" [ngModelOptions]="{updateOn: 'blur'}">
+```
+
+- With reactive forms, set the property in the `FormControl` instance.
+
+```ts
+new FormControl('', {updateOn: 'blur'});
+```

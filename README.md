@@ -63,8 +63,11 @@
 - https://angular.io/api/forms/NgModel
 - https://angular.io/api/forms/FormControl
 - https://angular.io/api/forms/AbstractControl
+- https://angular.io/api/forms/AbstractControlOptions
 - https://angular.io/api/forms/MinLengthValidator
 - https://angular.io/api/forms/Validators
+- https://angular.io/api/forms/NG_VALIDATORS
+- https://angular.io/api/forms/NG_ASYNC_VALIDATORS
 
 
 
